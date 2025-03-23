@@ -1,0 +1,3 @@
+/Users/june/Code/Projects/crafting/clox/build/CMakeFiles/clox.dir
+/Users/june/Code/Projects/crafting/clox/build/CMakeFiles/edit_cache.dir
+/Users/june/Code/Projects/crafting/clox/build/CMakeFiles/rebuild_cache.dir
