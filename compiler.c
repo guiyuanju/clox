@@ -71,7 +71,7 @@ typedef struct Compiler {
 
 typedef struct ClassCompiler {
   struct ClassCompiler* enclosing;
-  bool hasSupserclass;
+  bool hasSuperclass;
 } ClassCompiler;
 
 Parser parser;
@@ -255,7 +255,6 @@ static void endScope() {
     } else {
       emitByte(OP_POP);
     }
-    emitByte(OP_POP);
     current->localCount--;
   }
 }
@@ -335,7 +334,7 @@ static int resolveUpvalue(Compiler* compiler, Token* name) {
 
 static void addLocal(Token name) {
   if (current->localCount == UINT8_COUNT) {
-    error("Too many local variables int fucntion.");
+    error("Too many local variables in function.");
     return;
   }
 
@@ -400,7 +399,7 @@ static uint8_t argumentList() {
     do {
       expression();
       if (argCount == 255) {
-        error("can't have more than 255 arguments.");
+        error("Can't have more than 255 arguments.");
       }
       argCount++;
     } while (match(TOKEN_COMMA));
@@ -469,7 +468,7 @@ static void dot(bool canAssign) {
   uint8_t name = identifierConstant(&parser.previous);
 
   if (canAssign && match(TOKEN_EQUAL)) {
-    expression(0);
+    expression();
     emitBytes(OP_SET_PROPERTY, name);
   } else if (match(TOKEN_LEFT_PAREN)) {
     uint8_t argCount = argumentList();
@@ -559,7 +558,7 @@ static Token syntheticToken(const char* text) {
 static void super_(bool canAssign) {
   if (currentClass == NULL) {
     error("Can't use 'super' outside of a class.");
-  } else if (!currentClass->hasSupserclass) {
+  } else if (!currentClass->hasSuperclass) {
     error("Can't use 'super' in a class with no superclass.");
   }
 
@@ -737,7 +736,7 @@ static void classDeclaration() {
   defineVariable(nameConstant);
 
   ClassCompiler classCompiler;
-  classCompiler.hasSupserclass = false;
+  classCompiler.hasSuperclass = false;
   classCompiler.enclosing = currentClass;
   currentClass = &classCompiler;
 
@@ -749,14 +748,14 @@ static void classDeclaration() {
       error("A class can't inherit from itself.");
     }
 
+    beginScope();
+    addLocal(syntheticToken("super"));
+    defineVariable(0);
+
     namedVariable(className, false);
     emitByte(OP_INHERIT);
-    classCompiler.hasSupserclass = true;
+    classCompiler.hasSuperclass = true;
   }
-
-  beginScope();
-  addLocal(syntheticToken("super"));
-  defineVariable(0);
 
   namedVariable(className, false);
   consume(TOKEN_LEFT_BRACE, "Expect '{' before class body.");
@@ -766,7 +765,7 @@ static void classDeclaration() {
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
   emitByte(OP_POP);
 
-  if (classCompiler.hasSupserclass) {
+  if (classCompiler.hasSuperclass) {
     endScope();
   }
 
@@ -878,7 +877,7 @@ static void returnStatement() {
     emitReturn();
   } else {
     if (current->type == TYPE_INITIALIZER) {
-      error("Can't return a value from a initializer.");
+      error("Can't return a value from an initializer.");
     }
 
     expression();
